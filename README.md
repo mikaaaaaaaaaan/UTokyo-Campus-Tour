@@ -1,2 +1,2 @@
 # UTokyo-Campus-Tour
-This is a bongo card for UTokyo campus tour
+This is a digital bingo card for UTokyo campus tour for the UTokyo-AUW summer program
