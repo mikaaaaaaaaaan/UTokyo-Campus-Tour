@@ -1,2 +1,2 @@
 # UTokyo-Campus-Tour
-This is a digital bingo card for UTokyo campus tour for the UTokyo-AUW summer program
+This is a digital card for UTokyo campus tour in the UTokyo-AUW summer program
