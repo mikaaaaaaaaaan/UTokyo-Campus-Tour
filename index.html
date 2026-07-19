@@ -742,6 +742,15 @@
         const artwork = [...document.querySelectorAll('.artwork-layer img')];
         const loadedArtwork = await Promise.all(artwork.map((image) => loadExportImage(image.getAttribute('src'))));
         const pageRect = document.getElementById('bingo-card').getBoundingClientRect();
+        const toCanvasRect = (element) => {
+          const rect = element.getBoundingClientRect();
+          return {
+            x: (rect.left - pageRect.left) * (canvas.width / pageRect.width),
+            y: (rect.top - pageRect.top) * (canvas.height / pageRect.height),
+            width: rect.width * (canvas.width / pageRect.width),
+            height: rect.height * (canvas.height / pageRect.height)
+          };
+        };
         loadedArtwork.forEach((image, index) => {
           if (!image) return;
           const placement = artwork[index];
@@ -783,44 +792,62 @@
         ctx.font = '500 22px Arial';
         ctx.fillText(nameInput.value.trim(), 485, 247);
 
-        ctx.fillStyle = '#edf5fc';
-        ctx.fillRect(220, 286, 800, 128);
-        ctx.fillStyle = '#f3cb55';
-        ctx.fillRect(220, 286, 10, 128);
-        ctx.fillStyle = '#c99416';
-        ctx.font = '700 21px Arial';
-        ctx.fillText('RECOMMENDED ROUTE', 252, 320);
-        ctx.fillStyle = '#244b75';
-        ctx.font = '400 15px Arial';
-        const routeText = 'Faculty of Science Building 1 - Yasuda Auditorium - Co-op - Central Cafeteria - Main Gate - Akamon Gate - General Library - Sanshiro Pond - Gotenshita - Faculty of Science Building 1';
-        wrapText(ctx, routeText, 730, 2).forEach((line, index) => ctx.fillText(line, 252, 354 + index * 22));
+        const routeElement = document.querySelector('.route');
+        const routeBox = toCanvasRect(routeElement);
+        const routeHeadingElement = routeElement.querySelector('h2');
+        const routeHeadingBox = toCanvasRect(routeHeadingElement);
+        const routeTextElement = routeElement.querySelector('p');
+        const routeTextBox = toCanvasRect(routeTextElement);
+        const routeStyle = getComputedStyle(routeElement);
+        const routeHeadingStyle = getComputedStyle(routeHeadingElement);
+        const routeTextStyle = getComputedStyle(routeTextElement);
+        const scaleX = canvas.width / pageRect.width;
+        const scaleY = canvas.height / pageRect.height;
 
-        const gridX = 90;
-        const gridY = 440;
-        const gridWidth = 1060;
-        const gridHeight = 1044;
-        const cellWidth = gridWidth / 3;
-        const cellHeight = gridHeight / 3;
+        ctx.fillStyle = '#edf5fc';
+        ctx.fillRect(routeBox.x, routeBox.y, routeBox.width, routeBox.height);
+        ctx.fillStyle = '#f3cb55';
+        ctx.fillRect(routeBox.x, routeBox.y, parseFloat(routeStyle.borderLeftWidth) * scaleX, routeBox.height);
+        ctx.fillStyle = '#c99416';
+        const routeHeadingFontSize = parseFloat(routeHeadingStyle.fontSize) * scaleX;
+        ctx.font = `700 ${Math.round(routeHeadingFontSize)}px Arial`;
+        ctx.fillText('RECOMMENDED ROUTE', routeHeadingBox.x, routeHeadingBox.y + routeHeadingFontSize);
+        ctx.fillStyle = '#244b75';
+        const routeTextFontSize = parseFloat(routeTextStyle.fontSize) * scaleX;
+        const routeTextLineHeight = parseFloat(routeTextStyle.lineHeight) * scaleY;
+        ctx.font = `400 ${Math.round(routeTextFontSize)}px Arial`;
+        const routeText = 'Faculty of Science Building 1 - Yasuda Auditorium - Co-op - Central Cafeteria - Main Gate - Akamon Gate - General Library - Sanshiro Pond - Gotenshita - Faculty of Science Building 1';
+        wrapText(ctx, routeText, routeTextBox.width, 2).forEach((line, index) => {
+          ctx.fillText(line, routeTextBox.x, routeTextBox.y + routeTextLineHeight * (index + .78));
+        });
+
+        const grid = toCanvasRect(document.querySelector('.bingo-grid'));
+        ctx.fillStyle = '#91b4dd';
+        ctx.fillRect(grid.x, grid.y, grid.width, grid.height);
 
         cells.forEach((cell, index) => {
-          const col = index % 3;
-          const row = Math.floor(index / 3);
-          const x = gridX + col * cellWidth;
-          const y = gridY + row * cellHeight;
+          const cellRect = toCanvasRect(cell);
+          const x = cellRect.x;
+          const y = cellRect.y;
+          const cellWidth = cellRect.width;
+          const cellHeight = cellRect.height;
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(x, y, cellWidth, cellHeight);
-          ctx.strokeStyle = '#91b4dd';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(x, y, cellWidth, cellHeight);
 
-          const taskLines = wrapText(ctx, cell.dataset.task, cellWidth - 42, 3);
+          const taskElement = cell.querySelector('.task');
+          const taskRect = toCanvasRect(taskElement);
           ctx.fillStyle = '#2f6fb2';
-          ctx.font = '700 20px Arial';
-          taskLines.forEach((line, lineIndex) => ctx.fillText(line, x + 22, y + 35 + lineIndex * 25));
-          const answerX = x + 22;
-          const answerY = y + 92;
-          const answerWidth = cellWidth - 44;
-          const answerHeight = 62;
+          ctx.font = `700 ${Math.round(parseFloat(getComputedStyle(taskElement).fontSize) * (canvas.width / pageRect.width))}px Arial`;
+          const taskLines = wrapText(ctx, cell.dataset.task, taskRect.width, 3);
+          const taskLineHeight = parseFloat(getComputedStyle(taskElement).lineHeight) * (canvas.height / pageRect.height);
+          taskLines.forEach((line, lineIndex) => ctx.fillText(line, taskRect.x, taskRect.y + taskLineHeight * (lineIndex + .78)));
+
+          const answerElement = cell.querySelector('.answer');
+          const answerRect = toCanvasRect(answerElement);
+          const answerX = answerRect.x;
+          const answerY = answerRect.y;
+          const answerWidth = answerRect.width;
+          const answerHeight = answerRect.height;
           ctx.fillStyle = '#f4f9fe';
           ctx.fillRect(answerX, answerY, answerWidth, answerHeight);
           ctx.strokeStyle = '#9bbce0';
@@ -835,10 +862,11 @@
             ctx.fillText(line, answerX + 10, answerY + 25 + lineIndex * 22);
           });
 
-          const photoX = x + 22;
-          const photoY = answerY + answerHeight + 12;
-          const photoWidth = cellWidth - 44;
-          const photoHeight = y + cellHeight - 22 - photoY;
+          const photoRect = toCanvasRect(cell.querySelector('.photo-slot'));
+          const photoX = photoRect.x;
+          const photoY = photoRect.y;
+          const photoWidth = photoRect.width;
+          const photoHeight = photoRect.height;
           ctx.fillStyle = '#edf5fc';
           ctx.fillRect(photoX, photoY, photoWidth, photoHeight);
           ctx.strokeStyle = '#78a5d3';
